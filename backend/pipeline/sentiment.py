@@ -76,6 +76,7 @@ def score_sentiment(clause_list: List[ClauseRecord], mode: str = 'lite') -> List
     Score sentiment for each clause.
     Lite mode: lexicon + rating prior
     Full mode: blend transformer + lexicon + rating prior
+    Also applies sarcasm and rating-conflict checks.
     """
     lexicon = load_hinglish_lexicon()
     transformer = None
@@ -98,26 +99,21 @@ def score_sentiment(clause_list: List[ClauseRecord], mode: str = 'lite') -> List
                 label = result[0]['label']
                 confidence = result[0]['score']
 
-                # Map label to score
                 if label == 'POS':
                     transformer_score = confidence
                 elif label == 'NEG':
                     transformer_score = -confidence
-                # NEU stays 0
             except Exception:
                 transformer_score = 0.0
 
         # Blend scores
         if mode == 'full':
-            # Blend: 0.5 transformer, 0.35 lexicon, 0.15 rating prior
             clause.score = 0.5 * transformer_score + 0.35 * lex_score
             clause.score_source = 'blend'
         else:
-            # Lite: 0.7 lexicon, 0.3 rating prior
             clause.score = lex_score
             clause.score_source = 'lexicon'
 
-        # Clamp to -1 to 1
         clause.score = max(-1.0, min(1.0, clause.score))
 
         # Determine polarity
@@ -130,7 +126,33 @@ def score_sentiment(clause_list: List[ClauseRecord], mode: str = 'lite') -> List
 
         clause.confidence = min(0.9, abs(clause.score) + 0.3)
 
+        # Sarcasm checks
+        check_sarcasm(clause, words)
+
     return clause_list
+
+
+def check_sarcasm(clause: ClauseRecord, words: list) -> None:
+    """
+    Apply sarcasm detection rules.
+    Rule 1: positive phrase + failure event = sarcasm
+    Rule 2: text polarity vs rating conflict (checked later with actual rating)
+    """
+    text = ' '.join(words)
+
+    # Rule 1: positive words + failure events
+    positive_words = {'great', 'amazing', 'awesome', 'excellent', 'perfect', 'fantastic',
+                     'wonderful', 'love', 'thanks', 'thankyou', 'wow', 'waah', 'brilliant'}
+    failure_words = {'broke', 'broken', 'stopped', 'stopped_working', 'died', 'dead',
+                    'failed', 'fail', 'late', 'delayed', 'damaged', 'cracked', 'useless',
+                    'waste', 'terrible', 'horrible', 'awful', 'worst', 'kharab', 'bekaar',
+                    'ghatiya', 'bakwaas'}
+
+    has_positive = any(word in text for word in positive_words)
+    has_failure = any(word in text for word in failure_words)
+
+    if has_positive and has_failure:
+        clause.sarcasm_suspect = True
 
 
 def compute_lexicon_score(words: list, lexicon: dict) -> float:

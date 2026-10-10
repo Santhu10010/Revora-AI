@@ -1,0 +1,21 @@
+# Ticket Template
+## {{ aspect | title }} - {{ polarity | upper }}
+
+**Team:** {{ team }}
+**Priority:** {{ priority }}
+**Mentions:** {{ mentions }} reviews
+**Impact:** Estimated -{{ damage | round(1) }} rating points
+
+### Summary
+{{ mentions }} customers complained about {{ aspect }}. This issue affects {{ pct_negative | round(1) }}% of reviews and is the {{ priority_rank }}th most impactful issue.
+
+### Evidence
+{% for review in evidence %}
+- "{{ review.text }}" ({{ review.rating }}/5)
+{% endfor %}
+
+### Recommended Action
+Fix {{ aspect }} to recover an estimated +{{ damage | round(1) }} rating points on average.
+
+### Success Metric
+Reduce negative mentions of {{ aspect }} by 50% within 30 days.

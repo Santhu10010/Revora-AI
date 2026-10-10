@@ -197,8 +197,139 @@ def get_analysis(analysis_id: str):
     }
 
 
-@app.get("/api/analyses/{analysis_id}/reviews")
-def get_analysis_reviews(analysis_id: str, aspect: Optional[str] = None, polarity: Optional[str] = None):
+@app.post("/api/analyses/{analysis_id}/actions")
+def generate_actions(analysis_id: str, aspect: str, polarity: str):
+    """
+    Generate ticket and reply draft for an issue.
+    """
+    if analysis_id not in ANALYSES_CACHE:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    results = ANALYSES_CACHE[analysis_id]["results"]
+
+    # Find the insight
+    insight = None
+    for i in results.insights:
+        if i.aspect == aspect and i.polarity == polarity:
+            insight = i
+            break
+
+    if not insight:
+        raise HTTPException(status_code=404, detail="Insight not found")
+
+    # Get top 3 evidence reviews
+    evidence_clauses = [
+        c for c in results.clauses
+        if c.aspect == aspect and c.polarity == polarity
+    ][:3]
+
+    evidence_reviews = []
+    for clause in evidence_clauses:
+        review = next((r for r in results.reviews if r.review_id == clause.review_id), None)
+        if review:
+            evidence_reviews.append({
+                "text": clause.clause_text,
+                "rating": review.rating or "N/A"
+            })
+
+    # Determine team and priority from routing
+    routing = {
+        'battery': ('Product/Engineering', 'P2'),
+        'camera': ('Product/Engineering', 'P2'),
+        'display': ('Product/Engineering', 'P2'),
+        'performance': ('Product/Engineering', 'P1'),
+        'build_quality': ('Product/Engineering', 'P2'),
+        'delivery': ('Logistics', 'P2'),
+        'packaging': ('Logistics', 'P3'),
+        'price': ('Pricing/Marketing', 'P3'),
+    }
+
+    team, priority = routing.get(aspect, ('Product', 'P2'))
+
+    # Render templates
+    try:
+        from jinja2 import Environment, FileSystemLoader
+        env = Environment(loader=FileSystemLoader('backend/templates'))
+
+        ticket_template = env.get_template('ticket.jinja2')
+        reply_template = env.get_template('reply.jinja2')
+
+        ticket = ticket_template.render(
+            aspect=aspect,
+            polarity=polarity,
+            team=team,
+            priority=priority,
+            mentions=insight.mentions,
+            damage=insight.damage or 0,
+            pct_negative=insight.pct_negative * 100,
+            priority_rank=insight.priority_rank,
+            evidence=evidence_reviews
+        )
+
+        reply = reply_template.render(
+            aspect=aspect
+        )
+    except Exception as e:
+        # Fallback to plain text if templates not available
+        ticket = f"Issue: {aspect} ({polarity})\nTeam: {team}\nPriority: {priority}\nMentions: {insight.mentions}"
+        reply = f"Thank you for your feedback on {aspect}. We are working to improve this."
+
+    return {
+        "aspect": aspect,
+        "polarity": polarity,
+        "ticket": ticket,
+        "reply": reply
+    }
+
+
+@app.get("/api/analyses/{analysis_id}/export")
+def export_analysis(analysis_id: str, format: str = "markdown"):
+    """
+    Export analysis results as Markdown or CSV.
+    """
+    if analysis_id not in ANALYSES_CACHE:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    results = ANALYSES_CACHE[analysis_id]["results"]
+
+    if format == "markdown":
+        md = f"# Analysis Report\n\n"
+        md += f"**Reviews:** {results.meta.total_reviews}\n"
+        md += f"**Average Rating:** {results.meta.avg_rating:.2f}\n"
+        md += f"**Negative:** {results.meta.pct_negative:.1%}\n\n"
+
+        md += "## Top Issues\n\n"
+        for insight in results.insights[:5]:
+            if insight.polarity == 'neg':
+                md += f"### {insight.aspect}\n"
+                md += f"- Mentions: {insight.mentions}\n"
+                md += f"- Impact: -{insight.damage:.1f} rating points\n"
+                md += f"- Confidence: {insight.confidence_label}\n\n"
+
+        return {"format": "markdown", "content": md}
+
+    elif format == "csv":
+        import csv
+        from io import StringIO
+
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['aspect', 'polarity', 'mentions', 'damage', 'pct_negative', 'confidence'])
+
+        for insight in results.insights:
+            writer.writerow([
+                insight.aspect,
+                insight.polarity,
+                insight.mentions,
+                insight.damage or 0,
+                insight.pct_negative,
+                insight.confidence_label
+            ])
+
+        return {"format": "csv", "content": output.getvalue()}
+
+    else:
+        raise HTTPException(status_code=400, detail="Format must be 'markdown' or 'csv'")
     """
     Get reviews for an analysis, filtered by aspect/polarity.
     Returns reviews with clauses highlighted for the aspect.
