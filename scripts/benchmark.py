@@ -119,5 +119,4 @@ def run_benchmark():
 
 
 if __name__ == '__main__':
-    os.chdir('C:\\Users\\santh\\Desktop\\revora ai')
     results = run_benchmark()

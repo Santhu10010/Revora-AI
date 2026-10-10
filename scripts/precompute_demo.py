@@ -1,10 +1,13 @@
 """Precompute demo analysis and cache it."""
+import pickle
 import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from pathlib import Path
 
 import pandas as pd
-import pickle
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
 from backend.pipeline.analyze import analyze
 
 
@@ -13,7 +16,7 @@ def precompute_demo():
     Run full analysis on demo_hinglish.csv and save results.
     """
     print("Loading demo data...")
-    df = pd.read_csv('data/demo_hinglish.csv')
+    df = pd.read_csv(ROOT / 'data' / 'demo_hinglish.csv')
     print(f"Loaded {len(df)} reviews")
 
     print("\nRunning analysis (lite mode)...")
@@ -28,13 +31,13 @@ def precompute_demo():
     print(f"  Safety cases: {len(results.meta.safety_cases)}")
 
     # Save results
-    cache_file = 'data/demo_results.pkl'
+    cache_file = ROOT / 'data' / 'demo_results.pkl'
     with open(cache_file, 'wb') as f:
         pickle.dump(results, f)
     print(f"\nCached results to {cache_file}")
 
     # Also save a summary
-    summary_file = 'data/demo_summary.txt'
+    summary_file = ROOT / 'data' / 'demo_summary.txt'
     with open(summary_file, 'w') as f:
         f.write(f"Demo Analysis Summary\n")
         f.write(f"====================\n\n")
@@ -55,5 +58,4 @@ def precompute_demo():
 
 
 if __name__ == '__main__':
-    os.chdir('C:\\Users\\santh\\Desktop\\revora ai')
     precompute_demo()

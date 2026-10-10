@@ -142,6 +142,5 @@ def run_checklist():
 
 
 if __name__ == '__main__':
-    os.chdir('C:\\Users\\santh\\Desktop\\revora ai')
     passed = run_checklist()
     sys.exit(0 if passed else 1)

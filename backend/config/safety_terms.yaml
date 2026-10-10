@@ -1,15 +1,15 @@
 safety_terms:
   critical:
     - term: fire
-      hinglish: [aag, jalaa, fire, smok] # smok for smoke
+      hinglish: [aag, jalaa, fire, smok]
     - term: explosion
-      hinglish: [blast, explode, explode, explosive]
+      hinglish: [blast, explode, explosive]
     - term: spark
-      hinglish: [spark, current, shock]
+      hinglish: [spark, current, electric]
     - term: electric_shock
       hinglish: [shock, current, electric]
     - term: burn
-      hinglish: [burn, burn, jalaa, garm]
+      hinglish: [burn, burnt, scorched, jalaa, garm]
     - term: smoke
       hinglish: [smoke, dhuaa, fumes]
 
@@ -21,22 +21,22 @@ safety_terms:
     - term: choking
       hinglish: [choke, choking, dum_ghut]
     - term: bleeding
-      hinglish: [bleed, bleeding, khun, cut]
+      hinglish: [bleed, bleeding, khun, cut, wound]
     - term: injury
-      hinglish: [injury, hurt, damage, chot, zakmi]
+      hinglish: [injury, fracture, zakmi]
     - term: faint
       hinglish: [faint, behosh, chakkar]
 
   medium:
     - term: overheat
-      hinglish: [overheat, garam, heating]
+      hinglish: [overheat, overheating, garam, heating, hot, heat]
     - term: swell
-      hinglish: [swell, bulge, phoola]
+      hinglish: [swell, swelling, bulge, phoola]
     - term: leak
-      hinglish: [leak, leakage, risav]
+      hinglish: [leak, leakage, leaking, risav]
     - term: toxic
       hinglish: [toxic, poison, chemical]
 
 negation_window: 5
-context_required: false # Removed context guard for higher recall
+context_required: true
 embedding_check_full_mode: true
