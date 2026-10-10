@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api, AnalyzeResponse } from '../lib/api';
+import { ScrollExpand } from './ScrollExpand';
 
 interface UploadProps {
   onAnalysisComplete: (result: AnalyzeResponse) => void;
@@ -37,7 +38,7 @@ export const Upload: React.FC<UploadProps> = ({ onAnalysisComplete, onError }) =
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="bg-white rounded-lg shadow p-8">
+      <ScrollExpand className="bg-white rounded-lg shadow p-8">
         <h2 className="text-2xl font-bold mb-6">Upload Review Data</h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -106,7 +107,7 @@ export const Upload: React.FC<UploadProps> = ({ onAnalysisComplete, onError }) =
             <li>Email addresses and phone numbers are redacted</li>
           </ul>
         </div>
-      </div>
+      </ScrollExpand>
     </div>
   );
 };

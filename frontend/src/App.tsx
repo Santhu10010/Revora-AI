@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Upload } from './components/Upload';
 import { Overview } from './components/Overview';
 import { DrillDown } from './components/DrillDown';

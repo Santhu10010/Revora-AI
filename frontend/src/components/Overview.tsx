@@ -1,13 +1,13 @@
-import React from 'react';
-import { AnalyzeResponse, SafetyAlert } from '../lib/api';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { FC } from 'react';
+import { AnalyzeResponse } from '../lib/api';
+import { SpotlightCard } from './SpotlightCard';
 
 interface OverviewProps {
   result: AnalyzeResponse;
   onIssueClick: (aspect: string, polarity: string) => void;
 }
 
-export const Overview: React.FC<OverviewProps> = ({ result, onIssueClick }) => {
+export const Overview: FC<OverviewProps> = ({ result, onIssueClick }) => {
   const hasRating = result.avg_rating !== null;
 
   return (
@@ -76,31 +76,32 @@ export const Overview: React.FC<OverviewProps> = ({ result, onIssueClick }) => {
           ) : (
             <div className="space-y-3">
               {result.top_issues.map((issue, i) => (
-                <div
-                  key={`${issue.aspect}-${issue.polarity}`}
-                  onClick={() => onIssueClick(issue.aspect || 'other', issue.polarity)}
-                  className="border border-gray-200 rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-semibold text-lg">
-                        #{i + 1} {issue.aspect || 'Other'} {issue.confidence_label === 'low' && '⚠️'}
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        {issue.mentions} mentions ({(issue.pct_negative * 100).toFixed(0)}% negative)
-                      </p>
-                    </div>
-                    {issue.damage !== null && (
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">Estimated impact</p>
-                        <p className="text-xl font-bold text-red-600">-{issue.damage.toFixed(1)} ⭐</p>
+                <SpotlightCard key={`${issue.aspect}-${issue.polarity}`} className="border border-gray-200 rounded-lg">
+                  <div
+                    onClick={() => onIssueClick(issue.aspect || 'other', issue.polarity)}
+                    className="p-4 cursor-pointer hover:bg-gray-50 transition"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="font-semibold text-lg">
+                          #{i + 1} {issue.aspect || 'Other'} {issue.confidence_label === 'low' && '⚠️'}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {issue.mentions} mentions ({(issue.pct_negative * 100).toFixed(0)}% negative)
+                        </p>
                       </div>
+                      {issue.damage !== null && (
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">Estimated impact</p>
+                          <p className="text-xl font-bold text-red-600">-{issue.damage.toFixed(1)} ⭐</p>
+                        </div>
+                      )}
+                    </div>
+                    {issue.confidence_label === 'low' && (
+                      <p className="text-xs text-orange-600">Low confidence (fewer than 30 mentions)</p>
                     )}
                   </div>
-                  {issue.confidence_label === 'low' && (
-                    <p className="text-xs text-orange-600">Low confidence (fewer than 30 mentions)</p>
-                  )}
-                </div>
+                </SpotlightCard>
               ))}
             </div>
           )}
