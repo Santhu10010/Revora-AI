@@ -1,15 +1,60 @@
 """Clustering of similar clauses."""
 from typing import List, Tuple
 from backend.schemas import ClauseRecord, ClusterRecord
+import numpy as np
+
+
+EMBEDDING_MODEL = None  # Lazy-loaded for full mode
+
+
+def load_embedding_model():
+    """Lazy-load multilingual embedding model for full mode."""
+    global EMBEDDING_MODEL
+    if EMBEDDING_MODEL is not None:
+        return EMBEDDING_MODEL
+
+    try:
+        from sentence_transformers import SentenceTransformer
+        EMBEDDING_MODEL = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
+        return EMBEDDING_MODEL
+    except Exception as e:
+        print(f"Failed to load embedding model: {e}")
+        return None
+
+
+def compute_embeddings(texts: List[str], model) -> np.ndarray:
+    """Compute embeddings for a list of texts."""
+    if model is None:
+        return None
+    try:
+        embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
+        return embeddings
+    except Exception:
+        return None
+
+
+def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+    """Compute cosine similarity between two vectors."""
+    norm_a = np.linalg.norm(a)
+    norm_b = np.linalg.norm(b)
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return np.dot(a, b) / (norm_a * norm_b)
 
 
 def cluster_clauses(clause_list: List[ClauseRecord], mode: str = 'lite') -> Tuple[List[ClusterRecord], List[ClauseRecord]]:
     """
-    Cluster clauses by aspect and polarity using simple similarity (lite mode).
-    Lite mode: group by common words and similar text.
+    Cluster clauses by aspect and polarity.
+    Lite mode: simple keyword similarity (Jaccard)
+    Full mode: multilingual embeddings (cosine similarity)
     """
     if not clause_list:
         return [], clause_list
+
+    # Load embedding model if full mode
+    embedding_model = None
+    if mode == 'full':
+        embedding_model = load_embedding_model()
 
     # Group by aspect and polarity
     groups = {}
@@ -39,8 +84,13 @@ def cluster_clauses(clause_list: List[ClauseRecord], mode: str = 'lite') -> Tupl
             cluster_id_counter += 1
             continue
 
-        # Simple clustering: group by common words (simple similarity)
-        clusters = simple_cluster_by_similarity(clauses_in_group)
+        # Clustering
+        if mode == 'full' and embedding_model:
+            # Use embeddings
+            clusters = cluster_by_embeddings(clauses_in_group, embedding_model)
+        else:
+            # Use Jaccard similarity
+            clusters = simple_cluster_by_similarity(clauses_in_group)
 
         # Create cluster records
         for sub_clauses in clusters:
@@ -62,6 +112,46 @@ def cluster_clauses(clause_list: List[ClauseRecord], mode: str = 'lite') -> Tupl
             cluster_id_counter += 1
 
     return cluster_list, clause_list
+
+
+def cluster_by_embeddings(clauses: List[ClauseRecord], model) -> List[List[ClauseRecord]]:
+    """Cluster using embeddings and cosine similarity."""
+    if len(clauses) < 2:
+        return [clauses]
+
+    texts = [c.clause_text for c in clauses]
+    embeddings = compute_embeddings(texts, model)
+
+    if embeddings is None:
+        return [clauses]
+
+    # Greedy clustering: start with first embedding, add similar ones
+    clusters = []
+    assigned = set()
+    threshold = 0.4
+
+    for i, emb_i in enumerate(embeddings):
+        if i in assigned:
+            continue
+
+        cluster = [clauses[i]]
+        assigned.add(i)
+
+        # Find similar embeddings
+        for j in range(i + 1, len(embeddings)):
+            if j in assigned:
+                continue
+
+            emb_j = embeddings[j]
+            similarity = cosine_similarity(emb_i, emb_j)
+
+            if similarity > threshold:
+                cluster.append(clauses[j])
+                assigned.add(j)
+
+        clusters.append(cluster)
+
+    return clusters
 
 
 def simple_cluster_by_similarity(clauses: List[ClauseRecord]) -> List[List[ClauseRecord]]:
