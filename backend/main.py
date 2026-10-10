@@ -73,21 +73,28 @@ async def analyze_upload(
         # Parse based on extension
         try:
             if file.filename.lower().endswith('.csv'):
-                # Try UTF-8-sig first (handles BOM), then UTF-8, then latin-1
-                try:
-                    df = pd.read_csv(BytesIO(content), encoding='utf-8-sig')
-                except UnicodeDecodeError:
+                last_error = None
+                for encoding in ('utf-8-sig', 'utf-8', 'latin-1'):
                     try:
-                        df = pd.read_csv(BytesIO(content), encoding='utf-8')
-                    except UnicodeDecodeError:
-                        df = pd.read_csv(BytesIO(content), encoding='latin-1')
+                        df = pd.read_csv(BytesIO(content), encoding=encoding)
+                        break
+                    except (UnicodeDecodeError, pd.errors.EmptyDataError, pd.errors.ParserError) as exc:
+                        last_error = exc
+                else:
+                    raise last_error or ValueError('Unable to decode CSV file')
             else:
-                df = pd.read_excel(BytesIO(content))
+                try:
+                    df = pd.read_excel(BytesIO(content))
+                except Exception as exc:
+                    raise ValueError(f"Invalid XLSX file: {exc}")
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
 
+        if df.empty or df.shape[1] == 0 or all(str(col).strip() == '' for col in df.columns):
+            raise HTTPException(status_code=400, detail="File is empty or has no usable columns")
+
         # Check upload size limits
-        max_rows = 2000 if mode == 'lite' else 5000
+        max_rows = 2000 if mode == 'lite' else 1000
         if len(df) > max_rows:
             raise HTTPException(
                 status_code=400,
@@ -137,6 +144,7 @@ async def analyze_upload(
             "mode": mode,
             "review_count": results.meta.total_reviews,
             "avg_rating": results.meta.avg_rating,
+            "rating_source": results.reviews[0].rating_source if results.reviews else "pseudo",
             "pct_negative": results.meta.pct_negative,
             "languages": results.meta.languages_detected,
             "top_issues": top_issues,
@@ -186,14 +194,20 @@ def get_analysis(analysis_id: str):
         "created_at": cache_entry["created_at"],
         "review_count": results.meta.total_reviews,
         "avg_rating": results.meta.avg_rating,
+        "rating_source": results.reviews[0].rating_source if results.reviews else "pseudo",
         "pct_negative": results.meta.pct_negative,
         "languages": results.meta.languages_detected,
+        "warnings": results.meta.warnings,
+        "safety_alerts": results.meta.safety_cases,
         "top_issues": [
             {
                 "aspect": i.aspect,
                 "polarity": i.polarity,
                 "mentions": i.mentions,
-                "damage": i.damage
+                "pct_negative": i.pct_negative,
+                "damage": i.damage,
+                "priority_rank": i.priority_rank,
+                "confidence_label": i.confidence_label
             }
             for i in results.insights
             if i.polarity == 'neg'
