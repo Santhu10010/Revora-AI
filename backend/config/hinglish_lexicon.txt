@@ -43,10 +43,13 @@ acceptable	pos	0.5
 adequate	pos	0.5
 satisfactory	pos	0.5
 elegant	pos	1.0
-design	pos	0.3
+fast	pos	0.8
+quick	pos	0.8
+on_time	pos	1.0
+smooth	pos	0.8
 exceeds	pos	1.0
-innovate	pos	1.0
 innovation	pos	1.0
+fine	pos	0.5
 
 # Negative words - Hinglish
 bakwaas	neg	1.5
@@ -89,7 +92,9 @@ shock	neg	1.5
 average	neg	0.3
 mediocre	neg	0.5
 unremarkable	neg	0.5
-so	neg	0.3
+late	neg	1.0
+delayed	neg	0.8
+took_long	neg	0.8
 
 # Negation words
 nahi	negation	1.0

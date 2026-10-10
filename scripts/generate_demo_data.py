@@ -86,17 +86,17 @@ def generate_demo_data(output_path='data/demo_hinglish.csv', num_reviews=300):
     for i in range(num_reviews):
         # Decide which aspects are mentioned
         has_battery = random.random() < 0.7
-        has_delivery = random.random() < 0.6
+        has_delivery = random.random() < 0.8  # Even higher
         has_packaging = random.random() < 0.5
         has_camera = random.random() < 0.6
         has_performance = random.random() < 0.5
 
-        # Decide sentiment per aspect
-        battery_neg = has_battery and random.random() < 0.4
-        delivery_neg = has_delivery and random.random() < 0.3
-        packaging_neg = has_packaging and random.random() < 0.3
-        camera_neg = has_camera and random.random() < 0.3
-        performance_neg = has_performance and random.random() < 0.4
+        # Decide sentiment per aspect (make them more independent)
+        battery_neg = has_battery and random.random() < 0.35
+        delivery_neg = has_delivery and random.random() < 0.30
+        packaging_neg = has_packaging and random.random() < 0.25
+        camera_neg = has_camera and random.random() < 0.25
+        performance_neg = has_performance and random.random() < 0.30
 
         # Build review text
         clauses = []
