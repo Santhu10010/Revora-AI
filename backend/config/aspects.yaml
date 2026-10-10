@@ -1,0 +1,100 @@
+aspects:
+  battery:
+    english:
+      - battery
+      - charge
+      - power
+      - drain
+      - endurance
+      - stamina
+    hinglish:
+      - battery
+      - charge
+      - power
+      - backup
+      - life
+
+  camera:
+    english:
+      - camera
+      - photo
+      - picture
+      - video
+      - lens
+      - zoom
+      - image
+    hinglish:
+      - camera
+      - photo
+      - picture
+
+  display:
+    english:
+      - display
+      - screen
+      - brightness
+      - color
+      - resolution
+    hinglish:
+      - screen
+      - display
+
+  performance:
+    english:
+      - performance
+      - speed
+      - lag
+      - freeze
+      - slow
+      - fast
+    hinglish:
+      - speed
+      - lag
+      - performance
+
+  build_quality:
+    english:
+      - build
+      - quality
+      - design
+      - material
+      - durability
+      - fragile
+    hinglish:
+      - build
+      - quality
+      - material
+
+  delivery:
+    english:
+      - delivery
+      - shipping
+      - packaging
+      - unboxing
+      - arrival
+    hinglish:
+      - delivery
+      - packaging
+
+  packaging:
+    english:
+      - package
+      - packaging
+      - box
+      - unboxing
+    hinglish:
+      - packaging
+      - dabba
+
+  price:
+    english:
+      - price
+      - cost
+      - expensive
+      - cheap
+      - value
+      - deal
+    hinglish:
+      - price
+      - cost
+      - mahengi

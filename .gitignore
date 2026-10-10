@@ -1,0 +1,75 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# FastAPI/Uvicorn
+*.log
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env.local
+
+# Models and cache
+*.bin
+*.pt
+*.pth
+*.model
+models/
+cache/
+*.cache
+
+# Uploads
+uploads/
+temp/
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+supabase/
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# OS
+Thumbs.db
+.DS_Store

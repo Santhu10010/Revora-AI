@@ -1,0 +1,67 @@
+# Revora AI Configuration
+app:
+  mode: lite  # lite or full
+  debug: false
+
+# Sentiment thresholds
+sentiment:
+  negative_threshold: -0.25
+  positive_threshold: 0.25
+  polarity_classes:
+    - neg
+    - neu
+    - pos
+
+# Blend weights (full mode)
+blend:
+  transformer_weight: 0.5
+  lexicon_weight: 0.35
+  rating_prior_weight: 0.15
+
+# Lite mode weights
+lite_blend:
+  lexicon_weight: 0.7
+  rating_prior_weight: 0.3
+
+# Language detection
+language:
+  confidence_threshold: 0.6
+  default_lang: und  # undetermined
+  tier_mapping:
+    en: 1
+    hi: 1
+    hinglish: 1
+    kanglish: 2
+    tanglish: 2
+    tenglish: 2
+    mixed: 3
+    und: 4
+
+# Clustering
+clustering:
+  distance_threshold: 0.4
+  min_cluster_size: 3
+  linkage: ward
+
+# Impact model
+impact:
+  min_mentions: 30
+  low_confidence_threshold: 30
+
+# Upload limits
+upload:
+  lite_max_rows: 2000
+  full_max_rows: 5000
+  max_file_size_mb: 50
+  max_text_length: 1000
+
+# Translation (full mode)
+translation:
+  enabled: true
+  max_clauses_per_run: 200
+
+# Processing
+processing:
+  batch_size: 32
+  max_length: 64
+  demo_cache_enabled: true

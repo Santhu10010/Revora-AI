@@ -1,0 +1,14 @@
+pandas==2.2.0
+numpy==1.26.4
+scikit-learn==1.4.1
+pydantic==2.6.1
+fastapi==0.109.1
+uvicorn==0.27.0
+python-multipart==0.0.6
+pyyaml==6.0.1
+torch==2.2.0
+transformers==4.37.2
+sentence-transformers==2.3.1
+fasttext-language-identification==0.2.4
+openpyxl==3.1.2
+statsmodels==0.14.0

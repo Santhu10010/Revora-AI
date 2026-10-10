@@ -1,0 +1,74 @@
+safety_terms:
+  critical:
+    - term: fire
+      context: [product, device, phone, earbuds, battery, charger]
+      hinglish: [aag, aag_lag_gayi, jalaa, jalaa_gaya]
+      devanagari: [आग, जला]
+    - term: explosion
+      context: [product, device, phone, battery]
+      hinglish: [blast, dhakka, patakha]
+      devanagari: [विस्फोट, बम]
+    - term: spark
+      context: [product, device, phone, battery, charger]
+      hinglish: [bijli, current]
+      devanagari: [बिजली, स्पार्क]
+    - term: shock
+      context: [product, device, phone, charger, current, electric]
+      hinglish: [current_laga, jhhatka, electric_shock]
+      devanagari: [करंट, झटका, इलेक्ट्रिक]
+    - term: burn
+      context: [product, device, phone, battery, charger, skin, hand, body]
+      hinglish: [jalaa, burn, garam]
+      devanagari: [जला, गर्म]
+    - term: smoke
+      context: [product, device, phone, battery, charger]
+      hinglish: [dhuaa, fumes]
+      devanagari: [धुआं, धुआँ]
+
+  high:
+    - term: allergic
+      context: [skin, reaction, body, material]
+      hinglish: [allergy, skin_problem]
+      devanagari: [एलर्जी, त्वचा]
+    - term: rash
+      context: [skin, body, hand, face]
+      hinglish: [khujli, skin_problem]
+      devanagari: [खुजली, त्वचा]
+    - term: choking
+      context: [breath, asphyxia, suffocation]
+      hinglish: [dum_ghut_gaya, saans_nahi]
+      devanagari: [दम, सांस]
+    - term: bleeding
+      context: [cut, wound, blood]
+      hinglish: [khun_bah_gaya, khun]
+      devanagari: [खून, रक्त]
+    - term: injury
+      context: [wound, cut, hurt, damage]
+      hinglish: [chot, zakmi]
+      devanagari: [चोट, घाव]
+    - term: fainting
+      context: [unconscious, dizzy]
+      hinglish: [behosh, chakkar]
+      devanagari: [बेहोश, चक्कर]
+
+  medium:
+    - term: overheating
+      context: [product, device, phone, battery, charger]
+      hinglish: [garam_ho_gaya, temp_high]
+      devanagari: [गर्म, तापमान]
+    - term: swelling
+      context: [battery, product, device]
+      hinglish: [phoola, bulge, expansion]
+      devanagari: [फूला, सूजन]
+    - term: leakage
+      context: [battery, liquid, product]
+      hinglish: [leak, leakage]
+      devanagari: [रिसाव]
+    - term: toxic
+      context: [material, chemical, fumes]
+      hinglish: [poison, chemical]
+      devanagari: [जहर, रसायन]
+
+negation_window: 5  # words to check on either side
+context_required: true
+embedding_check_full_mode: true

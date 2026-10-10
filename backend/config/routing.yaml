@@ -1,0 +1,45 @@
+routing:
+  battery:
+    team: Product/Engineering
+    priority: P2
+    description: Battery performance, endurance, charging
+
+  camera:
+    team: Product/Engineering
+    priority: P2
+    description: Camera quality, focus, zoom, video
+
+  display:
+    team: Product/Engineering
+    priority: P2
+    description: Screen quality, brightness, colors
+
+  performance:
+    team: Product/Engineering
+    priority: P1
+    description: Device speed, lag, freezing
+
+  build_quality:
+    team: Product/Engineering
+    priority: P2
+    description: Build quality, durability, design
+
+  delivery:
+    team: Logistics
+    priority: P2
+    description: Delivery speed, packaging condition
+
+  packaging:
+    team: Logistics
+    priority: P3
+    description: Package quality, unboxing experience
+
+  price:
+    team: Pricing/Marketing
+    priority: P3
+    description: Pricing strategy, value perception
+
+  safety:
+    team: QA/Compliance
+    priority: P0
+    description: Safety issues requiring immediate escalation

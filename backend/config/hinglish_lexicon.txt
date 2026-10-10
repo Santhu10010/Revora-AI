@@ -1,0 +1,132 @@
+# Hinglish Sentiment Lexicon
+# Format: word\tpolarity\tintensity
+# polarity: pos, neg, neut, negation, intensifier
+# intensity: 1.0 (standard), 1.5 (strong), 0.5 (weak)
+
+# Positive words
+bahut_acha	pos	1.5
+zabardast	pos	1.5
+kamaal	pos	1.5
+jabardasth	pos	1.5
+fantastic	pos	1.5
+amazing	pos	1.5
+super	pos	1.0
+nice	pos	1.0
+acha	pos	1.0
+theek	pos	0.5
+ok	pos	0.5
+sahi	pos	1.0
+badhiya	pos	1.5
+ekdum	pos	1.5
+paisa_vasool	pos	1.5
+maza	pos	1.0
+khushi	pos	1.0
+satisfied	pos	1.0
+happy	pos	1.0
+love	pos	1.5
+impressed	pos	1.0
+gem	pos	1.5
+excellent	pos	1.5
+awesome	pos	1.5
+perfect	pos	1.5
+brilliant	pos	1.5
+great	pos	1.0
+good	pos	1.0
+waah	pos	1.5
+wow	pos	1.0
+thanks	pos	0.5
+thankyou	pos	0.5
+grateful	pos	1.0
+recommend	pos	1.0
+recommend_everyone	pos	1.5
+
+# Negative words
+bakwaas	neg	1.5
+ghatiya	neg	1.5
+bekaar	neg	1.5
+bekar	neg	1.5
+kharab	neg	1.0
+bura	neg	1.0
+mara	neg	1.5
+gaya	neg	1.0
+nahin	neg	1.0
+nahi	neg	1.0
+nhi	neg	1.0
+problem	neg	1.0
+issue	neg	1.0
+worst	neg	1.5
+bad	neg	1.0
+terrible	neg	1.5
+horrible	neg	1.5
+awful	neg	1.5
+useless	neg	1.5
+waste	neg	1.5
+regret	neg	1.5
+disappointed	neg	1.5
+disappointed_absolutely	neg	1.5
+frustrating	neg	1.5
+frustrate	neg	1.5
+annoying	neg	1.0
+broken	neg	1.5
+fail	neg	1.5
+failed	neg	1.5
+not_worth	neg	1.5
+rubbish	neg	1.5
+junk	neg	1.5
+trash	neg	1.5
+poor	neg	1.0
+weak	neg	1.0
+slow	neg	1.0
+lag	neg	1.0
+lag_ho_raha	neg	1.5
+kabab	neg	1.5
+flop	neg	1.5
+bekar_product	neg	1.5
+mast_nahi	neg	1.5
+theek_nahi	neg	1.5
+
+# Negation words
+nahi	negation	1.0
+nhi	negation	1.0
+nahin	negation	1.0
+na	negation	0.8
+no	negation	1.0
+not	negation	1.0
+nope	negation	1.0
+koi_nahin	negation	1.0
+bilkul_nahi	negation	1.0
+bilkul	negation	0.8
+
+# Intensifiers
+bilkul	intensifier	1.5
+bahut	intensifier	1.5
+bohat	intensifier	1.5
+ekdum	intensifier	1.5
+bahot	intensifier	1.5
+boht	intensifier	1.5
+very	intensifier	1.5
+too	intensifier	1.5
+so	intensifier	1.5
+zyada	intensifier	1.5
+bahot_zyada	intensifier	1.5
+bilkul_hi	intensifier	1.5
+sabse	intensifier	1.5
+completely	intensifier	1.5
+absolutely	intensifier	1.5
+really	intensifier	1.5
+extremely	intensifier	1.5
+totally	intensifier	1.5
+literally	intensifier	1.5
+
+# Spelling variants (normalized form -> standard form)
+bakwas	bakwaas
+khaab	kharab
+kharab	kharab
+bekaar	bekaar
+bekar	bekaar
+ghatya	ghatiya
+ghatiaa	ghatiya
+badhya	badhiya
+badhiaa	badhiya
+zabardst	zabardast
+zabrdasth	zabardast
