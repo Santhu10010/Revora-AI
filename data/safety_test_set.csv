@@ -1,0 +1,47 @@
+text,expected_tier,notes
+phone caught fire,critical,clear hazard
+battery started smoking,critical,clear hazard
+got electric shock,critical,clear hazard
+device exploded,critical,clear hazard
+sparks coming out,critical,clear hazard
+no overheating detected,none,negation guard
+phone does not catch fire,none,negation guard
+no burns or injuries,none,negation guard
+never had any shock,none,negation guard
+no allergic reactions,none,negation guard
+got allergic reaction,high,clear hazard
+skin rash appeared,high,clear hazard
+phone caused bleeding,high,clear hazard
+severe choking hazard,high,clear hazard
+suffered injury,high,clear hazard
+fainted after use,high,clear hazard
+battery overheating,medium,clear hazard
+swelling on battery,medium,clear hazard
+fluid leakage detected,medium,clear hazard
+charger getting very hot,medium,caution level
+the product overheats a lot,medium,clear hazard
+battery swelled up,medium,clear hazard
+leaking battery acid,medium,clear hazard
+no leaks or damage,none,negation guard
+didn't overheat at all,none,negation guard
+never burned me,none,negation guard
+device is perfectly safe,none,no hazard words
+works great with no issues,none,no hazard words
+best phone ever,none,no hazard words
+terrible camera,none,no hazard
+battery life is poor,none,no hazard
+delivery was late,none,no hazard
+packaging was damaged,none,no hazard
+screen cracked from drop,none,no hazard
+phone overheating causing burns,critical,combined hazard words
+battery fire risk,critical,clear hazard
+electric shock from charger,critical,clear hazard
+allergic reaction to materials,high,clear hazard
+caused severe bleeding,high,clear hazard
+choking on small parts,high,clear hazard
+joint swelling after use,high,clear hazard
+overheating past safe limit,medium,clear hazard
+battery leaking chemicals,medium,clear hazard
+no fire hazard whatsoever,none,negation guard
+safe from electric shock,none,negation guard
+won't cause allergies,none,negation guard

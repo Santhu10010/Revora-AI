@@ -29,10 +29,10 @@ def load_safety_terms():
 
 def scan_safety(clause_list: List[ClauseRecord], mode: str = 'lite') -> List[ClauseRecord]:
     """
-    Scan for safety hazards with negation and context guards.
+    Scan for safety hazards with negation guard but no context requirement.
     """
     safety_config = load_safety_terms()
-    negation_words = {'no', 'not', 'nahi', 'nhi', 'nahin', 'na', 'koi nahin'}
+    negation_words = {'no', 'not', 'nahi', 'nhi', 'nahin', 'na', 'koi nahin', "doesn't", "don't", "isn't", 'safe'}
     negation_window = safety_config.get('negation_window', 5)
 
     for clause in clause_list:
@@ -54,14 +54,10 @@ def scan_safety(clause_list: List[ClauseRecord], mode: str = 'lite') -> List[Cla
                         if is_negated(text, check_term, negation_words, negation_window):
                             continue
 
-                        # Context guard: check if term co-occurs with product/body context
-                        context_words = {'product', 'device', 'phone', 'earbuds', 'battery',
-                                       'charger', 'skin', 'hand', 'body', 'burn', 'broke',
-                                       'stopped', 'late', 'stopped working'}
-                        if any(ctx in text for ctx in context_words):
-                            clause.safety_tier = tier
-                            tier_matched = True
-                            break
+                        # No context required - just set the tier
+                        clause.safety_tier = tier
+                        tier_matched = True
+                        break
 
                 if tier_matched:
                     break
@@ -72,13 +68,14 @@ def scan_safety(clause_list: List[ClauseRecord], mode: str = 'lite') -> List[Cla
 def is_negated(text: str, term: str, negation_words: set, window: int) -> bool:
     """
     Check if a term is negated by looking at nearby negation words.
+    Also check for "never" as a strong negation.
     """
     words = text.split()
 
     # Find position of term
     term_pos = -1
     for i, word in enumerate(words):
-        if term in word:
+        if term in word or word in term:
             term_pos = i
             break
 
@@ -90,7 +87,12 @@ def is_negated(text: str, term: str, negation_words: set, window: int) -> bool:
     end = min(len(words), term_pos + window + 1)
 
     for i in range(start, end):
-        if i != term_pos and words[i] in negation_words:
-            return True
+        if i != term_pos:
+            word = words[i]
+            if word in negation_words or word == 'never':
+                return True
+            # Check for contracted negations
+            if "n't" in word or "n't" in word:
+                return True
 
     return False
