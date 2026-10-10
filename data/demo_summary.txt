@@ -1,0 +1,16 @@
+Demo Analysis Summary
+====================
+
+Reviews: 299
+Avg Rating: 3.90
+Negative: 20.5%
+Processing Time: 1172ms
+Languages: {'en': 291, 'hinglish': 8}
+Safety Cases: 35
+
+Top Issues:
+  battery: 62 mentions, -83.0 pts
+  delivery: 12 mentions, -10.8 pts
+  packaging: 49 mentions, -7.1 pts
+  build_quality: 12 mentions, -5.2 pts
+  performance: 13 mentions, -3.5 pts
