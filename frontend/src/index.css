@@ -2,24 +2,471 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color: #191c1e;
+  background: #f7f9fb;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+.dark-theme {
+  color-scheme: dark;
+  --revora-page: #0a0a0a;
+  --revora-surface: #0e0e0e;
+  --revora-surface-muted: #171717;
+  --revora-border: #27272a;
+  --revora-border-strong: #333333;
+  --revora-text: #f4f4f5;
+  --revora-muted: #a1a1aa;
+  --revora-subtle: #71717a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: #f7f9fb;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+html.dark-theme,
+html.dark-theme body,
+body.dark-theme {
+  background: var(--revora-page);
+  color: var(--revora-text);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  min-height: 2rem;
+  padding: 0.125rem;
+  border: 1px solid #e0e3e5;
+  border-radius: 0.25rem;
+  background: #f2f4f6;
+  color: #737686;
+}
+
+.theme-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  color: inherit;
+  font-size: 0.7rem;
+  font-weight: 500;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.theme-option:hover {
+  color: #515f74;
+}
+
+.theme-option.active {
+  background: #ffffff;
+  color: #191c1e;
+  box-shadow: 0 1px 2px rgba(25, 28, 30, 0.08);
+}
+
+.dark-theme .theme-toggle {
+  border-color: var(--revora-border);
+  background: var(--revora-surface-muted);
+  color: var(--revora-subtle);
+}
+
+.dark-theme .theme-option:hover {
+  color: var(--revora-muted);
+}
+
+.dark-theme .theme-option.active {
+  background: #282828;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+/* Keep the existing component markup themeable without changing its API-facing behavior. */
+.dark-theme [class*="bg-[#f7f9fb]"] {
+  background-color: var(--revora-page) !important;
+}
+
+.dark-theme [class*="bg-white"] {
+  background-color: var(--revora-surface) !important;
+}
+
+.dark-theme .enterprise-card {
+  background: var(--revora-surface);
+  border-color: var(--revora-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.dark-theme [class*="bg-[#f2f4f6]"],
+.dark-theme [class*="bg-[#eceef0]"] {
+  background-color: var(--revora-surface-muted) !important;
+}
+
+.dark-theme [class*="bg-gray-50"] {
+  background-color: var(--revora-surface-muted) !important;
+}
+
+.dark-theme [class*="bg-gray-900"] {
+  background-color: #282828 !important;
+}
+
+.dark-theme [class*="bg-blue-50"] {
+  background-color: #171717 !important;
+}
+
+.dark-theme [class*="bg-red-50"] {
+  background-color: #450a0a !important;
+}
+
+.dark-theme [class*="bg-red-100"] {
+  background-color: #450a0a !important;
+}
+
+.dark-theme [class*="bg-green-50"] {
+  background-color: #132a1b !important;
+}
+
+.dark-theme [class*="bg-green-200"] {
+  background-color: #254b32 !important;
+}
+
+.dark-theme [class*="bg-red-200"] {
+  background-color: #63252b !important;
+}
+
+.dark-theme [class*="bg-[#dbe1ff]"] {
+  background-color: #282828 !important;
+}
+
+.dark-theme [class*="bg-[#eeefff]"] {
+  background-color: #282828 !important;
+}
+
+.dark-theme [class*="border-gray-300"] {
+  border-color: var(--revora-border-strong) !important;
+}
+
+.dark-theme [class*="border-blue-100"] {
+  border-color: var(--revora-border) !important;
+}
+
+.dark-theme [class*="border-red-100"],
+.dark-theme [class*="border-red-200"] {
+  border-color: #7f2932 !important;
+}
+
+.dark-theme [class*="text-gray-900"] {
+  color: var(--revora-text) !important;
+}
+
+.dark-theme [class*="text-gray-700"] {
+  color: #e4e4e7 !important;
+}
+
+.dark-theme [class*="text-gray-600"],
+.dark-theme [class*="text-gray-500"] {
+  color: var(--revora-muted) !important;
+}
+
+.dark-theme [class*="text-blue-900"],
+.dark-theme [class*="text-blue-700"],
+.dark-theme [class*="text-blue-600"] {
+  color: var(--revora-text) !important;
+}
+
+.dark-theme [class*="text-red-900"],
+.dark-theme [class*="text-red-800"],
+.dark-theme [class*="text-red-700"],
+.dark-theme [class*="text-red-600"] {
+  color: #fecaca !important;
+}
+
+.dark-theme [class*="text-green-700"],
+.dark-theme [class*="text-green-600"] {
+  color: #86efac !important;
+}
+
+.dark-theme [class*="hover:bg-gray-50"]:hover,
+.dark-theme [class*="hover:bg-[#f2f4f6]"]:hover,
+.dark-theme [class*="hover:bg-[#eeefff]"]:hover {
+  background-color: #282828 !important;
+}
+
+.dark-theme [class*="hover:bg-red-50"]:hover {
+  background-color: #450a0a !important;
+}
+
+.dark-theme .theme-header {
+  background-color: #121212 !important;
+  border-color: var(--revora-border) !important;
+}
+
+.dark-theme .theme-nav {
+  background-color: var(--revora-surface) !important;
+  border-color: #1f1f1f !important;
+}
+
+.dark-theme .theme-rail {
+  background-color: var(--revora-surface) !important;
+  border-color: #1f1f1f !important;
+}
+
+.dark-theme .theme-footer {
+  background-color: #121212 !important;
+  border-color: var(--revora-border) !important;
+}
+
+.dark-theme .theme-dataset {
+  background-color: var(--revora-surface-muted) !important;
+  border-color: var(--revora-border) !important;
+}
+
+.dark-theme .theme-production {
+  background-color: #1f1f1f !important;
+  border-color: var(--revora-border) !important;
+  color: var(--revora-muted) !important;
+}
+
+.dark-theme [class*="border-[#e0e3e5]"],
+.dark-theme [class*="border-[#eceef0]"],
+.dark-theme [class*="border-gray-200"] {
+  border-color: var(--revora-border) !important;
+}
+
+.dark-theme [class*="border-[#c3c6d7]"] {
+  border-color: #536273 !important;
+}
+
+.dark-theme [class*="text-[#191c1e]"] {
+  color: var(--revora-text) !important;
+}
+
+.dark-theme [class*="text-[#515f74]"],
+.dark-theme [class*="text-[#737686]"],
+.dark-theme [class*="text-gray-500"],
+.dark-theme [class*="text-gray-600"] {
+  color: var(--revora-muted) !important;
+}
+
+.dark-theme [class*="text-[#004ac6]"] {
+  color: #ffffff !important;
+}
+
+.dark-theme [class*="border-[#004ac6]"] {
+  border-color: #ffffff !important;
+}
+
+.dark-theme [class*="hover:text-[#191c1e]"]:hover {
+  color: #ffffff !important;
+}
+
+.dark-theme [class*="text-yellow-900"] {
+  color: #fde68a !important;
+}
+
+.dark-theme [class*="text-yellow-800"] {
+  color: #fcd34d !important;
+}
+
+.dark-theme [class*="bg-yellow-50"] {
+  background-color: #3a3016 !important;
+}
+
+.dark-theme .safety-banner {
+  background: #39191d;
+  border-color: #7f2932;
+  color: #fecdd3;
+}
+
+.dark-theme select {
+  background-color: var(--revora-surface) !important;
+  color: var(--revora-text) !important;
+}
+
+.dark-theme option {
+  background: var(--revora-surface);
+  color: var(--revora-text);
 }
 
 .highlight {
-  background-color: rgba(251, 191, 36, 0.3);
+  background-color: #fff1bf;
   cursor: pointer;
 }
 
+.dark-theme .highlight {
+  background-color: #66551a;
+  color: #fff7c2;
+}
+
 .safety-banner {
-  @apply fixed top-0 left-0 right-0 bg-red-600 text-white p-4 shadow-lg z-50;
+  @apply relative bg-red-50 text-red-800 border border-red-200 p-4 shadow-none z-10;
+}
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.enterprise-card {
+  background: #ffffff;
+  border: 1px solid #e0e3e5;
+  border-radius: 0.25rem;
+  box-shadow: none;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Stitch enterprise layout tokens. The archive uses flat containment, tight
+   4px/8px rhythm, and color only for semantic state. */
+.app-main {
+  min-height: calc(100vh - 9rem);
+}
+
+.brand-mark {
+  letter-spacing: -0.08em;
+}
+
+.theme-status {
+  min-height: 2.25rem;
+}
+
+main h1,
+main h2,
+main h3,
+main h4 {
+  letter-spacing: -0.025em;
+}
+
+main input[type="text"],
+main input[type="search"],
+main select,
+main textarea {
+  border-radius: 0.125rem;
+}
+
+.dark-theme {
+  --revora-page: #0a0a0a;
+  --revora-surface: #121212;
+  --revora-surface-muted: #1c1b1b;
+  --revora-border: #2a2a2a;
+  --revora-border-strong: #333333;
+  --revora-text: #f5f5f5;
+  --revora-muted: #a3a3a3;
+  --revora-subtle: #737373;
+}
+
+.dark-theme .app-main {
+  background: #0a0a0a;
+}
+
+.dark-theme .theme-status {
+  background: #0a0a0a;
+  border-color: #2a2a2a;
+  color: #c4c7c7;
+}
+
+.dark-theme .brand-mark {
+  background: #f5f5f5;
+  color: #1c1b1b;
+}
+
+.dark-theme .enterprise-card {
+  background: #121212;
+  border-color: #2a2a2a;
+  box-shadow: none;
+}
+
+.dark-theme .safety-banner {
+  background: #210d0f;
+  border-color: #8f1d26;
+  color: #ffb4ab;
+}
+
+.dark-theme [class*="bg-blue-50"] {
+  background-color: #1c1b1b !important;
+}
+
+.dark-theme [class*="bg-gray-50"],
+.dark-theme [class*="bg-[#f2f4f6]"] {
+  background-color: #1c1b1b !important;
+}
+
+.dark-theme [class*="bg-[#eeefff]"] {
+  background-color: #262626 !important;
+}
+
+.dark-theme [class*="bg-green-50"] {
+  background-color: #132a1b !important;
+}
+
+.dark-theme [class*="bg-red-50"],
+.dark-theme [class*="bg-red-100"] {
+  background-color: #310f12 !important;
+}
+
+.dark-theme [class*="border-gray-200"],
+.dark-theme [class*="border-gray-300"],
+.dark-theme [class*="border-[#e0e3e5]"],
+.dark-theme [class*="border-[#eceef0]"] {
+  border-color: #2a2a2a !important;
+}
+
+.dark-theme [class*="text-gray-900"],
+.dark-theme [class*="text-[#191c1e]"] {
+  color: #f5f5f5 !important;
+}
+
+.dark-theme [class*="text-gray-700"],
+.dark-theme [class*="text-[#515f74]"] {
+  color: #e5e5e5 !important;
+}
+
+.dark-theme [class*="text-gray-600"],
+.dark-theme [class*="text-gray-500"],
+.dark-theme [class*="text-[#737686]"] {
+  color: #a3a3a3 !important;
+}
+
+.dark-theme button[class*="bg-[#004ac6]"],
+.dark-theme a[class*="bg-[#004ac6]"] {
+  background: #f5f5f5 !important;
+  color: #1c1b1b !important;
+}
+
+@media (min-width: 768px) {
+  .app-main {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+  }
 }

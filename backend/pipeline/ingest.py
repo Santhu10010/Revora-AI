@@ -103,6 +103,7 @@ def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Standardize optional columns to lowercase names."""
     rename_map = {
         'Rating': 'rating',
+        'Rate': 'rating',
         'Date': 'date',
         'Version': 'version',
         'Review_ID': 'review_id',

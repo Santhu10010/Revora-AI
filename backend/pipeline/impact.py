@@ -88,7 +88,7 @@ def fit_ols_regression(df, review_aspects: pd.DataFrame) -> Tuple[Dict, Dict, Di
     try:
         import statsmodels.api as sm
     except ImportError:
-        # Fallback: simple correlation without statsmodels
+        # Fallback: NumPy least-squares regression without statsmodels
         return fallback_simple_regression(df, review_aspects)
 
     # Prepare features
@@ -135,26 +135,25 @@ def fit_ols_regression(df, review_aspects: pd.DataFrame) -> Tuple[Dict, Dict, Di
 
 def fallback_simple_regression(df, review_aspects: pd.DataFrame) -> Tuple[Dict, Dict, Dict]:
     """
-    Fallback: simple correlation-based "betas" when statsmodels unavailable.
+    Fallback: multivariate least-squares regression when statsmodels is unavailable.
+
+    This preserves the same coefficient semantics as the statsmodels path.
+    Confidence remains low because standard errors and p-values are unavailable.
     """
     X = review_aspects.drop(columns=['review_id', 'rating'])
     y = review_aspects['rating']
 
-    betas = {}
+    feature_names = list(X.columns)
+    design = np.column_stack([np.ones(len(X)), X.to_numpy(dtype=float)])
+    coefficients, _, _, _ = np.linalg.lstsq(design, y.to_numpy(dtype=float), rcond=None)
+
+    betas = dict(zip(feature_names, coefficients[1:]))
     ci_dict = {}
     confidence_labels = {}
 
-    for col in X.columns:
-        # Compute correlation
-        if X[col].std() > 0:
-            correlation = X[col].corr(y)
-            # Scale to approximate beta (crude approximation)
-            betas[col] = correlation * y.std() / (X[col].std() + 1e-6)
-        else:
-            betas[col] = 0.0
-
+    for col in feature_names:
         ci_dict[col] = (betas[col] - 0.3, betas[col] + 0.3)
-        confidence_labels[col] = 'low'  # No p-value, assume low confidence
+        confidence_labels[col] = 'low'
 
     return betas, ci_dict, confidence_labels
 
@@ -184,6 +183,8 @@ def compute_insights_from_betas(
 
         insights[key]['mentions'] += 1
         insights[key]['all_reviews'].add(clause.review_id)
+        if clause.polarity == 'neg':
+            insights[key]['negative_reviews'].add(clause.review_id)
         insights[key]['clauses'].append(clause)
 
     # Build insight records
@@ -197,7 +198,7 @@ def compute_insights_from_betas(
             continue
 
         total_reviews = len(data['all_reviews'])
-        pct_negative = len(data['negative_reviews']) / max(1, total_reviews)
+        pct_negative = len(data['negative_reviews']) / max(1, total_reviews) if polarity == 'neg' else 0.0
 
         # Get beta from regression
         beta_key = f'{polarity}_{aspect}'

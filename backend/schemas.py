@@ -1,7 +1,7 @@
 """Pydantic schemas for Revora AI data contract."""
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class ReviewRecord(BaseModel):
@@ -75,7 +75,7 @@ class AnalysisMetadata(BaseModel):
     processing_ms: int = Field(ge=0)
     languages_detected: Dict[str, int] = Field(default_factory=dict)
     safety_cases: List[Dict[str, Any]] = Field(default_factory=list)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AnalysisResults(BaseModel):
@@ -85,3 +85,46 @@ class AnalysisResults(BaseModel):
     clusters: List[ClusterRecord]
     insights: List[InsightRecord]
     meta: AnalysisMetadata
+
+
+class SimulateRequest(BaseModel):
+    """Schema for simulation request."""
+    fixes: Dict[str, float] = Field(description="Aspect to fraction improvement, e.g., {'battery': 0.5}")
+
+
+class ActionRequest(BaseModel):
+    """Schema for issue action generation"""
+    aspect: Optional[str] = None
+    polarity: Optional[str] = None
+
+
+class ActionEvidence(BaseModel):
+    review_id: str
+    text: str
+    rating: Optional[float] = None
+
+
+class ActionResponse(BaseModel):
+    title: str
+    team: str
+    priority: str
+    summary: str
+    estimated_rating_uplift: float
+    evidence: List[ActionEvidence]
+    next_steps: List[str]
+    success_metric: str
+    reply_drafts: Dict[str, str]
+    ticket: Optional[str] = None
+    reply: Optional[str] = None
+
+
+class SimulateResponse(BaseModel):
+    """Schema for simulation response."""
+    current_avg: float
+    projected_avg: float
+    contributions: Dict[str, float]
+    single_cause_unhappy_count: int
+    confidence_labels: Dict[str, str]
+    rating_source: str
+    caveat: str
+    estimate_label: Optional[str] = None

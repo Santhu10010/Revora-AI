@@ -1,9 +1,13 @@
 """Evaluate safety detection recall and precision."""
-import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import sys
+from pathlib import Path
 
 import pandas as pd
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
 from backend.pipeline.safety import scan_safety
 from backend.schemas import ClauseRecord
 
@@ -14,7 +18,7 @@ def evaluate_safety():
     compute recall and precision.
     """
     print("Loading safety test set...")
-    df = pd.read_csv('data/safety_test_set.csv')
+    df = pd.read_csv(ROOT / 'data' / 'safety_test_set.csv')
     print(f"Loaded {len(df)} test cases")
 
     # Convert to ClauseRecords
@@ -135,6 +139,5 @@ def tier_to_level(tier: str) -> int:
 
 
 if __name__ == '__main__':
-    os.chdir('C:\\Users\\santh\\Desktop\\revora ai')
     passed = evaluate_safety()
     sys.exit(0 if passed else 1)

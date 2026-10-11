@@ -1,13 +1,51 @@
-"""Test that simulator recovers planted rating effects."""
+"""Diagnostic that verifies simulator recovery on a deterministic planted fixture."""
 import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from pathlib import Path
 
 import pandas as pd
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
 from backend.pipeline.analyze import analyze
 
 
-def test_planted_effects():
+def build_planted_fixture() -> pd.DataFrame:
+    """Build independent observations for each documented synthetic effect."""
+    rows = []
+    review_number = 0
+    rows.extend(
+        {
+            "review_id": f"synthetic_{review_number + index}",
+            "review_text": "Phone is great.",
+            "rating": 4.4,
+            "version": "fixture",
+            "date": "2024-01-01",
+        }
+        for index in range(60)
+    )
+    review_number += 60
+    effects = [
+        ("battery", "Battery life is terrible.", 3.2, 60),
+        ("delivery", "Delivery was terrible.", 3.6, 60),
+        ("packaging", "Packaging is terrible.", 3.9, 60),
+    ]
+    for _, (aspect, text, rating, count) in enumerate(effects):
+        for _ in range(count):
+            rows.append(
+                {
+                    "review_id": f"synthetic_{review_number}",
+                    "review_text": text,
+                    "rating": rating,
+                    "version": "fixture",
+                    "date": "2024-01-01",
+                }
+            )
+            review_number += 1
+    return pd.DataFrame(rows)
+
+
+def run_planted_effects_check():
     """
     Load demo data, run analysis, extract regression coefficients.
     Check if they recover the planted rule:
@@ -15,9 +53,9 @@ def test_planted_effects():
     - delivery negative: -0.8
     - packaging negative: -0.5
     """
-    print("Loading demo data...")
-    df = pd.read_csv('data/demo_hinglish.csv')
-    print(f"Loaded {len(df)} reviews")
+    print("Building deterministic planted fixture...")
+    df = build_planted_fixture()
+    print(f"Built {len(df)} reviews")
 
     print("\nRunning analysis...")
     results = analyze(df, mode='lite')
@@ -84,6 +122,7 @@ def test_planted_effects():
                 all_pass = False
         else:
             print(f"  Diff:          N/A (no beta)")
+            all_pass = False
 
     print("\n" + "="*60)
     print(f"Overall: {'PASS' if all_pass else 'FAIL'}")
@@ -93,6 +132,6 @@ def test_planted_effects():
 
 
 if __name__ == '__main__':
-    os.chdir('C:\\Users\\santh\\Desktop\\revora ai')
-    passed = test_planted_effects()
+    passed = run_planted_effects_check()
+    raise SystemExit(0 if passed else 1)
     sys.exit(0 if passed else 1)

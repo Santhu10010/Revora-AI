@@ -31,7 +31,8 @@ best phone ever,none,no hazard words
 terrible camera,none,no hazard
 battery life is poor,none,no hazard
 delivery was late,none,no hazard
-packaging was damaged,none,no hazard
+package came damaged,none,context guard
+the battery got hot,medium,clear hazard
 screen cracked from drop,none,no hazard
 phone overheating causing burns,critical,combined hazard words
 battery fire risk,critical,clear hazard
@@ -45,3 +46,5 @@ battery leaking chemicals,medium,clear hazard
 no fire hazard whatsoever,none,negation guard
 safe from electric shock,none,negation guard
 won't cause allergies,none,negation guard
+burn rate is high,none,context guard
+shocked by the price,none,context guard

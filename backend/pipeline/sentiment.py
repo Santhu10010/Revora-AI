@@ -4,10 +4,12 @@ import os
 from typing import List, Optional
 from backend.schemas import ClauseRecord
 import yaml
+from backend.ml.classifier import configured_artifact_dir, load_artifact, predict_texts
 
 
 HINGLISH_LEXICON = None
 TRANSFORMER_MODEL = None  # Lazy-loaded for full mode
+TRAINED_MODEL = None
 
 
 def load_hinglish_lexicon():
@@ -71,6 +73,22 @@ def load_transformer_model():
         return None
 
 
+def load_trained_model():
+    """Load the repository-trained classifier when explicitly configured."""
+    global TRAINED_MODEL
+    if TRAINED_MODEL is not None:
+        return TRAINED_MODEL
+    artifact_dir = configured_artifact_dir()
+    if artifact_dir is None:
+        return None
+    try:
+        TRAINED_MODEL = load_artifact(artifact_dir)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"Configured sentiment model unavailable; using existing Full-mode fallback: {exc}")
+        return None
+    return TRAINED_MODEL
+
+
 def score_sentiment(clause_list: List[ClauseRecord], mode: str = 'lite') -> List[ClauseRecord]:
     """
     Score sentiment for each clause.
@@ -80,9 +98,12 @@ def score_sentiment(clause_list: List[ClauseRecord], mode: str = 'lite') -> List
     """
     lexicon = load_hinglish_lexicon()
     transformer = None
+    trained_model = None
 
     if mode == 'full':
-        transformer = load_transformer_model()
+        trained_model = load_trained_model()
+        if trained_model is None:
+            transformer = load_transformer_model()
 
     for clause in clause_list:
         text = clause.clause_text.lower()
@@ -91,7 +112,28 @@ def score_sentiment(clause_list: List[ClauseRecord], mode: str = 'lite') -> List
         # Lexicon score
         lex_score = compute_lexicon_score(words, lexicon)
 
-        # Transformer score (full mode only)
+        # Repository-trained classifier score (full mode, when configured).
+        if trained_model is not None:
+            prediction = predict_texts(trained_model, [clause.clause_text])[0]
+            clause.score = (
+                prediction['probabilities'].get('pos', 0.0)
+                - prediction['probabilities'].get('neg', 0.0)
+            )
+            clause.score_source = 'trained'
+            clause.score = max(-1.0, min(1.0, clause.score))
+            if clause.score < -0.2:
+                clause.polarity = 'neg'
+            elif clause.score > 0.2:
+                clause.polarity = 'pos'
+            else:
+                clause.polarity = 'neu'
+            clause.confidence = min(0.9, prediction['score'])
+            check_sarcasm(clause, words)
+            continue
+
+        # Transformer score (full mode only). If no optional model is
+        # configured, retain the proven lexicon score instead of blending
+        # against a zero placeholder.
         transformer_score = 0.0
         if transformer:
             try:
@@ -107,9 +149,12 @@ def score_sentiment(clause_list: List[ClauseRecord], mode: str = 'lite') -> List
                 transformer_score = 0.0
 
         # Blend scores
-        if mode == 'full':
+        if mode == 'full' and transformer:
             clause.score = 0.5 * transformer_score + 0.35 * lex_score
             clause.score_source = 'blend'
+        elif mode == 'full':
+            clause.score = lex_score
+            clause.score_source = 'lexicon_fallback'
         else:
             clause.score = lex_score
             clause.score_source = 'lexicon'

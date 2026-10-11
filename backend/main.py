@@ -1,21 +1,25 @@
 """FastAPI backend for Revora AI."""
-import os
-import json
-from pathlib import Path
+import csv
 import hashlib
-import pandas as pd
-from io import BytesIO
-from typing import Optional
-from datetime import datetime
+import json
+import os
 import traceback
+from io import BytesIO, StringIO
+from pathlib import Path
+from typing import Optional
+from datetime import datetime, timezone
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Header
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+import pandas as pd
 import uvicorn
+import yaml
+from fastapi import FastAPI, File, Form, HTTPException, Header, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from backend.pipeline.analyze import analyze
-from backend.schemas import AnalysisResults, SimulateRequest, SimulateResponse
+from backend.ml.classifier import configured_artifact_dir
+from backend.schemas import ActionRequest, AnalysisResults, SimulateRequest, SimulateResponse
+from backend import history_store
 
 app = FastAPI(title="Revora AI", version="0.1.0")
 
@@ -29,11 +33,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory cache for analyses (lite mode, no DB)
-ANALYSES_CACHE = {}
+# Local cache backed by SQLite so history survives process restarts.
+history_store.initialize()
+ANALYSES_CACHE = {entry["id"]: entry for entry in history_store.list_all()}
 
 # Mode
 APP_MODE = os.getenv("APP_MODE", "lite")
+BASE_DIR = Path(__file__).resolve().parent
+
+
+def _get_analysis(analysis_id: str):
+    entry = ANALYSES_CACHE.get(analysis_id)
+    if entry is None:
+        entry = history_store.get(analysis_id)
+        if entry is not None:
+            ANALYSES_CACHE[analysis_id] = entry
+    return entry
+
+
+def _all_analyses():
+    entries = {entry["id"]: entry for entry in history_store.list_all()}
+    entries.update(ANALYSES_CACHE)
+    return sorted(entries.values(), key=lambda entry: entry["created_at"], reverse=True)
+
+
+def _load_routing():
+    routing_path = BASE_DIR / "config" / "routing.yaml"
+    with routing_path.open("r", encoding="utf-8") as fh:
+        payload = yaml.safe_load(fh) or {}
+    return payload.get("routing", {})
+
+
+def _route_for_aspect(aspect: str):
+    routing = _load_routing()
+    if not aspect:
+        return ("Product", "P2")
+    entry = routing.get(aspect.lower(), {})
+    if not entry:
+        return ("Product", "P2")
+    return (entry.get("team", "Product"), entry.get("priority", "P2"))
 
 
 @app.get("/health")
@@ -42,14 +80,50 @@ def health():
     return {
         "status": "ok",
         "mode": APP_MODE,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@app.get("/api/model-status")
+def model_status():
+    """Report the explicitly configured sentiment model without exposing paths."""
+    artifact_dir = configured_artifact_dir()
+    if artifact_dir is None:
+        return {
+            "active": False,
+            "model_name": "lite_lexicon",
+            "language": "general fallback",
+            "message": "Using the built-in lexicon sentiment scorer.",
+        }
+    metadata_path = artifact_dir / "metadata.json"
+    if not metadata_path.is_file():
+        return {
+            "active": False,
+            "model_name": "lite_lexicon",
+            "language": "general fallback",
+            "message": "Configured trained model metadata is unavailable; using the built-in scorer.",
+        }
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {
+            "active": False,
+            "model_name": "lite_lexicon",
+            "language": "general fallback",
+            "message": "Configured trained model metadata is invalid; using the built-in scorer.",
+        }
+    return {
+        "active": True,
+        "model_name": metadata.get("model_name", "trained_sentiment"),
+        "language": metadata.get("language", "unknown"),
+        "message": "Full mode uses the configured trained sentiment model.",
     }
 
 
 @app.post("/api/analyze")
 async def analyze_upload(
     file: UploadFile = File(...),
-    mode: Optional[str] = None
+    mode: Optional[str] = Form(None)
 ):
     """
     Upload a CSV/XLSX file and run analysis.
@@ -94,7 +168,7 @@ async def analyze_upload(
             raise HTTPException(status_code=400, detail="File is empty or has no usable columns")
 
         # Check upload size limits
-        max_rows = 2000 if mode == 'lite' else 1000
+        max_rows = 2000 if mode == 'lite' else 5000
         if len(df) > max_rows:
             raise HTTPException(
                 status_code=400,
@@ -109,16 +183,17 @@ async def analyze_upload(
 
         # Generate analysis ID
         file_hash = hashlib.md5(content).hexdigest()[:12]
-        analysis_id = f"analysis_{file_hash}_{int(datetime.utcnow().timestamp())}"
+        analysis_id = f"analysis_{file_hash}_{int(datetime.now(timezone.utc).timestamp())}"
 
-        # Cache results
-        ANALYSES_CACHE[analysis_id] = {
+        entry = {
             "id": analysis_id,
             "filename": file.filename,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "mode": mode,
             "results": results
         }
+        history_store.save(entry)
+        ANALYSES_CACHE[analysis_id] = entry
 
         # Build response
         top_issues = sorted(
@@ -127,7 +202,7 @@ async def analyze_upload(
                     "aspect": i.aspect,
                     "polarity": i.polarity,
                     "mentions": i.mentions,
-                    "pct_negative": (i.mentions / results.meta.total_reviews) if results.meta.total_reviews > 0 else 0,
+                    "pct_negative": i.pct_negative,
                     "damage": i.damage,
                     "priority_rank": i.priority_rank,
                     "confidence_label": i.confidence_label
@@ -173,7 +248,7 @@ def list_analyses():
                 "review_count": v["results"].meta.total_reviews,
                 "avg_rating": v["results"].meta.avg_rating
             }
-            for v in ANALYSES_CACHE.values()
+            for v in _all_analyses()
         ]
     }
 
@@ -181,10 +256,10 @@ def list_analyses():
 @app.get("/api/analyses/{analysis_id}")
 def get_analysis(analysis_id: str):
     """Retrieve saved analysis summary."""
-    if analysis_id not in ANALYSES_CACHE:
+    cache_entry = _get_analysis(analysis_id)
+    if cache_entry is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    cache_entry = ANALYSES_CACHE[analysis_id]
     results = cache_entry["results"]
 
     return {
@@ -199,6 +274,7 @@ def get_analysis(analysis_id: str):
         "languages": results.meta.languages_detected,
         "warnings": results.meta.warnings,
         "safety_alerts": results.meta.safety_cases,
+        "processing_ms": results.meta.processing_ms,
         "top_issues": [
             {
                 "aspect": i.aspect,
@@ -216,62 +292,50 @@ def get_analysis(analysis_id: str):
 
 
 @app.post("/api/analyses/{analysis_id}/actions")
-def generate_actions(analysis_id: str, aspect: str, polarity: str):
-    """
-    Generate ticket and reply draft for an issue.
-    """
-    if analysis_id not in ANALYSES_CACHE:
+def generate_actions(analysis_id: str, aspect: Optional[str] = None, polarity: Optional[str] = None, request: Optional[ActionRequest] = None):
+    """Generate a ticket and reply draft for an issue."""
+    cache_entry = _get_analysis(analysis_id)
+    if cache_entry is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    results = ANALYSES_CACHE[analysis_id]["results"]
+    if request is not None:
+        aspect = request.aspect or aspect
+        polarity = request.polarity or polarity
 
-    # Find the insight
-    insight = None
-    for i in results.insights:
-        if i.aspect == aspect and i.polarity == polarity:
-            insight = i
-            break
+    if not aspect or not polarity:
+        raise HTTPException(status_code=400, detail="Request body must include both 'aspect' and 'polarity'.")
 
+    results = cache_entry["results"]
+    insight = next((i for i in results.insights if i.aspect == aspect and i.polarity == polarity), None)
     if not insight:
         raise HTTPException(status_code=404, detail="Insight not found")
 
-    # Get top 3 evidence reviews
     evidence_clauses = [
         c for c in results.clauses
         if c.aspect == aspect and c.polarity == polarity
-    ][:3]
+    ][:5]
 
     evidence_reviews = []
     for clause in evidence_clauses:
         review = next((r for r in results.reviews if r.review_id == clause.review_id), None)
         if review:
             evidence_reviews.append({
+                "review_id": review.review_id,
                 "text": clause.clause_text,
-                "rating": review.rating or "N/A"
+                "rating": review.rating,
             })
 
-    # Determine team and priority from routing
-    routing = {
-        'battery': ('Product/Engineering', 'P2'),
-        'camera': ('Product/Engineering', 'P2'),
-        'display': ('Product/Engineering', 'P2'),
-        'performance': ('Product/Engineering', 'P1'),
-        'build_quality': ('Product/Engineering', 'P2'),
-        'delivery': ('Logistics', 'P2'),
-        'packaging': ('Logistics', 'P3'),
-        'price': ('Pricing/Marketing', 'P3'),
-    }
+    team, priority = _route_for_aspect(aspect)
+    if aspect.lower() == 'safety':
+        team = 'QA/Compliance'
+        priority = 'P0'
 
-    team, priority = routing.get(aspect, ('Product', 'P2'))
-
-    # Render templates
+    template_dir = BASE_DIR / "templates"
     try:
         from jinja2 import Environment, FileSystemLoader
-        env = Environment(loader=FileSystemLoader('backend/templates'))
-
+        env = Environment(loader=FileSystemLoader(str(template_dir)))
         ticket_template = env.get_template('ticket.jinja2')
         reply_template = env.get_template('reply.jinja2')
-
         ticket = ticket_template.render(
             aspect=aspect,
             polarity=polarity,
@@ -281,64 +345,54 @@ def generate_actions(analysis_id: str, aspect: str, polarity: str):
             damage=insight.damage or 0,
             pct_negative=insight.pct_negative * 100,
             priority_rank=insight.priority_rank,
-            evidence=evidence_reviews
+            evidence=evidence_reviews,
         )
+        reply = reply_template.render(aspect=aspect)
+    except Exception:
+        raise
 
-        reply = reply_template.render(
-            aspect=aspect
-        )
-    except Exception as e:
-        # Fallback to plain text if templates not available
-        ticket = f"Issue: {aspect} ({polarity})\nTeam: {team}\nPriority: {priority}\nMentions: {insight.mentions}"
-        reply = f"Thank you for your feedback on {aspect}. We are working to improve this."
-
+    summary = (
+        f"{insight.mentions} customer mentions flagged {aspect} with {insight.pct_negative:.1%} negative sentiment. "
+        f"Estimated uplift: +{(insight.damage or 0):.2f} rating points."
+    )
     return {
-        "aspect": aspect,
-        "polarity": polarity,
+        "title": f"{aspect.title()} issue ({polarity.upper()})",
+        "team": team,
+        "priority": priority,
+        "summary": summary,
+        "estimated_rating_uplift": float(insight.damage or 0.0),
+        "evidence": evidence_reviews,
+        "next_steps": [
+            f"Review the {aspect} feedback pattern across customer reports.",
+            "Confirm the root cause with engineering and QA before shipping a fix.",
+            "Track the reduction in negative mentions as the success metric for the next release.",
+        ],
+        "success_metric": f"Reduce negative {aspect} mentions by 50% in the next 30 days.",
+        "reply_drafts": {
+            "english": reply,
+            "hinglish": reply,
+        },
         "ticket": ticket,
-        "reply": reply
+        "reply": reply,
     }
 
 
-import csv
-from io import StringIO
-from fastapi.responses import StreamingResponse
-
 @app.get("/api/analyses/{analysis_id}/export")
-def export_analysis(analysis_id: str, format: str = "markdown"):
-    """
-    Export analysis results as Markdown or CSV.
-    """
-    if analysis_id not in ANALYSES_CACHE:
+def export_analysis(analysis_id: str, format: str = "md"):
+    """Export analysis results as Markdown or CSV."""
+    cache_entry = _get_analysis(analysis_id)
+    if cache_entry is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    results = ANALYSES_CACHE[analysis_id]["results"]
+    results = cache_entry["results"]
+    fmt = format.lower()
+    fmt = "md" if fmt == "markdown" else fmt
+    fmt = "md" if fmt == "md" else fmt
 
-    if format == "markdown":
-        md = f"# Analysis Report\n\n"
-        md += f"**Reviews:** {results.meta.total_reviews}\n"
-        md += f"**Average Rating:** {results.meta.avg_rating:.2f}\n"
-        md += f"**Negative:** {results.meta.pct_negative:.1%}\n\n"
-
-        md += "## Top Issues\n\n"
-        for insight in results.insights[:5]:
-            if insight.polarity == 'neg':
-                md += f"### {insight.aspect}\n"
-                md += f"- Mentions: {insight.mentions}\n"
-                md += f"- Impact: -{insight.damage:.1f} rating points\n"
-                md += f"- Confidence: {insight.confidence_label}\n\n"
-
-        return StreamingResponse(
-            StringIO(md),
-            media_type="text/markdown",
-            headers={"Content-Disposition": f"attachment; filename=analysis_{analysis_id}.md"}
-        )
-
-    elif format == "csv":
+    if fmt == "csv":
         output = StringIO()
         writer = csv.writer(output)
         writer.writerow(['aspect', 'polarity', 'mentions', 'damage', 'pct_negative', 'confidence'])
-
         for insight in results.insights:
             writer.writerow([
                 insight.aspect,
@@ -346,66 +400,82 @@ def export_analysis(analysis_id: str, format: str = "markdown"):
                 insight.mentions,
                 insight.damage or 0,
                 insight.pct_negative,
-                insight.confidence_label
+                insight.confidence_label,
             ])
-
+        content = output.getvalue()
         return StreamingResponse(
-            StringIO(output.getvalue()),
+            iter([content]),
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename=analysis_{analysis_id}.csv"}
+            headers={"Content-Disposition": f"attachment; filename=analysis_{analysis_id}.csv"},
         )
 
-    else:
-        raise HTTPException(status_code=400, detail="Format must be 'markdown' or 'csv'")
+    if fmt in {"md", "markdown"}:
+        md = f"# Analysis Report\n\n"
+        md += f"**Reviews:** {results.meta.total_reviews}\n"
+        md += f"**Average Rating:** {results.meta.avg_rating:.2f}\n"
+        md += f"**Negative:** {results.meta.pct_negative:.1%}\n\n"
+        md += "## Top Issues\n\n"
+        for insight in results.insights[:5]:
+            if insight.polarity == 'neg':
+                md += f"### {insight.aspect}\n"
+                md += f"- Mentions: {insight.mentions}\n"
+                md += f"- Impact: -{insight.damage:.1f} rating points\n"
+                md += f"- Confidence: {insight.confidence_label}\n\n"
+        return StreamingResponse(
+            iter([md]),
+            media_type="text/markdown",
+            headers={"Content-Disposition": f"attachment; filename=analysis_{analysis_id}.md"},
+        )
+
+    raise HTTPException(status_code=400, detail="Format must be 'csv' or 'md'.")
 
 
 @app.post("/api/analyses/{analysis_id}/simulate", response_model=SimulateResponse)
 def simulate(analysis_id: str, request: SimulateRequest):
-    """
-    Run rating impact simulation.
-    """
-    if analysis_id not in ANALYSES_CACHE:
+    """Run rating impact simulation."""
+    cache_entry = _get_analysis(analysis_id)
+    if cache_entry is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    results = ANALYSES_CACHE[analysis_id]["results"]
-    insights = results.insights
-
-    # Calculate impact
+    results = cache_entry["results"]
     current_avg = results.meta.avg_rating or 0.0
     projected_avg = current_avg
     contributions = {}
 
     for aspect, fraction in request.fixes.items():
-        # Find insight
-        insight = next((i for i in insights if i.aspect == aspect and i.polarity == 'neg'), None)
-        if insight and insight.damage:
-            improvement = abs(insight.damage) * fraction
+        if not 0.0 <= float(fraction) <= 1.0:
+            raise HTTPException(status_code=400, detail=f"Fix fraction for {aspect} must be between 0 and 1.")
+        insight = next((i for i in results.insights if i.aspect == aspect and i.polarity == 'neg'), None)
+        if insight is None:
+            raise HTTPException(status_code=400, detail=f"Aspect '{aspect}' is not present in this analysis.")
+        if insight.damage:
+            improvement = abs(insight.damage) * float(fraction)
             projected_avg += improvement
             contributions[aspect] = improvement
 
     projected_avg = min(5.0, projected_avg)
-
+    estimate_label = "sentiment-based estimate" if results.reviews and results.reviews[0].rating_source == "pseudo" else None
     return SimulateResponse(
         current_avg=current_avg,
         projected_avg=projected_avg,
         contributions=contributions,
-        single_cause_unhappy_count=sum(i.single_cause_unhappy for i in insights),
-        confidence_labels={i.aspect: i.confidence_label for i in insights},
+        single_cause_unhappy_count=sum(i.single_cause_unhappy for i in results.insights),
+        confidence_labels={i.aspect: i.confidence_label for i in results.insights},
         rating_source=results.reviews[0].rating_source if results.reviews else "given",
-        caveat="Estimates are associations from your review data, not guaranteed causes. Effects of several fixes are added; interactions are ignored."
+        caveat="Estimates are associations from your review data, not guaranteed causes. Effects of several fixes are added; interactions are ignored.",
+        estimate_label=estimate_label,
     )
 
 
-# ... existing code ...
 @app.delete("/api/analyses/{analysis_id}")
 def delete_analysis(analysis_id: str):
-    """
-    Delete an analysis.
-    """
-    if analysis_id not in ANALYSES_CACHE:
+    """Delete an analysis."""
+    cache_entry = _get_analysis(analysis_id)
+    if cache_entry is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    del ANALYSES_CACHE[analysis_id]
+    ANALYSES_CACHE.pop(analysis_id, None)
+    history_store.delete(analysis_id)
     return {"status": "success"}
 
 
@@ -415,17 +485,14 @@ def get_reviews(
     aspect: Optional[str] = None,
     polarity: Optional[str] = None,
     language: Optional[str] = None,
-    cluster: Optional[str] = None
+    cluster: Optional[str] = None,
 ):
-    """
-    Get reviews for an analysis, filtered by aspect/polarity/language/cluster.
-    Returns reviews with clauses highlighted for the selected aspect.
-    """
-    if analysis_id not in ANALYSES_CACHE:
+    """Get reviews for an analysis, filtered by aspect/polarity/language/cluster."""
+    cache_entry = _get_analysis(analysis_id)
+    if cache_entry is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    results = ANALYSES_CACHE[analysis_id]["results"]
-
+    results = cache_entry["results"]
     aspect_filter = aspect.lower() if aspect else None
     polarity_filter = polarity.lower() if polarity else None
     language_filter = language.lower() if language else None
@@ -434,7 +501,7 @@ def get_reviews(
     filtered_clauses = [
         clause for clause in results.clauses
         if (not aspect_filter or (clause.aspect and clause.aspect.lower() == aspect_filter))
-        and (not polarity_filter or clause.polarity.lower() == polarity_filter)
+        and (not polarity_filter or (clause.polarity and clause.polarity.lower() == polarity_filter))
         and (not cluster_filter or clause.cluster_id == cluster_filter)
     ]
 
@@ -449,8 +516,8 @@ def get_reviews(
         ]
 
     review_ids = {clause.review_id for clause in filtered_clauses}
-
     reviews = []
+
     for review in results.reviews:
         if review.review_id not in review_ids:
             continue
@@ -467,7 +534,6 @@ def get_reviews(
             clause_lower = clause_text.lower()
             if not clause_lower:
                 continue
-
             start_index = 0
             while True:
                 idx = text_lower.find(clause_lower, start_index)

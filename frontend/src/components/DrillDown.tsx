@@ -18,8 +18,8 @@ export const DrillDown: React.FC<DrillDownProps> = ({ analysisId, aspect, polari
       try {
         const data = await api.getReviews(analysisId, aspect, polarity);
         setReviews(data.reviews);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unable to load supporting reviews');
       } finally {
         setLoading(false);
       }
@@ -30,19 +30,19 @@ export const DrillDown: React.FC<DrillDownProps> = ({ analysisId, aspect, polari
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-8">
-        <p className="text-gray-600">Loading reviews...</p>
+      <div className="enterprise-card mx-auto max-w-4xl p-8">
+        <p className="text-[#737686]">Loading reviews...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto p-8">
+      <div className="enterprise-card mx-auto max-w-4xl p-8">
         <p className="text-red-600">Error: {error}</p>
         <button
           onClick={onBack}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md"
+          className="mt-4 rounded bg-[#004ac6] px-4 py-2 text-sm font-medium text-white"
         >
           Back
         </button>
@@ -51,31 +51,33 @@ export const DrillDown: React.FC<DrillDownProps> = ({ analysisId, aspect, polari
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="mx-auto max-w-4xl">
       <button
         onClick={onBack}
-        className="mb-6 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+        className="mb-5 rounded border border-[#e0e3e5] bg-[#f2f4f6] px-3 py-2 text-sm font-medium text-[#515f74] hover:bg-[#e6e8ea]"
       >
-        ← Back
+        ← Back to prioritization
       </button>
 
-      <h2 className="text-2xl font-bold mb-2">
+      <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.16em] text-[#737686]">Evidence review</p>
+      <h2 className="mb-2 text-2xl font-semibold tracking-tight">
         {aspect} - {polarity === 'neg' ? 'Negative' : 'Positive'} Reviews
       </h2>
-      <p className="text-gray-600 mb-6">{reviews.length} reviews found</p>
+      <p className="mb-6 text-sm text-[#737686]">{reviews.length} reviews found · Supporting evidence</p>
 
       <div className="space-y-4">
+        {reviews.length === 0 && <div className="enterprise-card p-6 text-sm text-[#737686]">No supporting reviews found.</div>}
         {reviews.map((review) => (
-          <div key={review.review_id} className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-400">
+          <div key={review.review_id} className="enterprise-card border-l-4 border-l-[#004ac6] p-5">
             <div className="flex justify-between items-start mb-3">
               <div>
-                <p className="text-sm text-gray-500">{review.review_id}</p>
+                <p className="font-mono text-xs text-[#737686]">{review.review_id}</p>
                 <div className="flex gap-2 mt-1">
-                  <span className="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                  <span                   className="inline-block rounded bg-[#f2f4f6] px-2 py-1 text-xs text-[#515f74]">
                     {review.lang}
                   </span>
                   {review.rating && (
-                    <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                    <span                     className="inline-block rounded bg-[#dbe1ff] px-2 py-1 text-xs text-[#003ea8]">
                       Rating: {review.rating}/5
                     </span>
                   )}
@@ -83,7 +85,7 @@ export const DrillDown: React.FC<DrillDownProps> = ({ analysisId, aspect, polari
               </div>
             </div>
 
-            <p className="text-gray-800 leading-relaxed">
+            <p className="leading-relaxed text-[#191c1e]">
               <HighlightedText text={review.text} highlights={review.highlights} />
             </p>
           </div>

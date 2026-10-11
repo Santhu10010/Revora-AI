@@ -3,7 +3,7 @@ import os
 from typing import Tuple
 import pandas as pd
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from backend.schemas import AnalysisResults, AnalysisMetadata, ReviewRecord
 from backend.pipeline import ingest, normalize, language, clauses, aspects, sentiment, safety, cluster, impact
@@ -63,19 +63,23 @@ def analyze(df: pd.DataFrame, mode: str = "lite") -> AnalysisResults:
         review_records.append(ReviewRecord(**review_dict))
 
     # Build metadata
+    avg_rating = df_clean['rating'].mean() if 'rating' in df_clean.columns else None
+    if pd.isna(avg_rating):
+        avg_rating = None
+
     meta = AnalysisMetadata(
         mode=mode,
         total_reviews=len(df_clean),
         total_clauses=len(clause_list),
         total_clusters=len(cluster_list),
         reviews_with_rating=int((df_clean['rating'].notna()).sum()),
-        avg_rating=df_clean['rating'].mean() if 'rating' in df_clean.columns else None,
+        avg_rating=avg_rating,
         pct_negative=compute_pct_negative(clause_list),
         warnings=warnings,
         processing_ms=processing_ms,
         languages_detected=count_languages(df_clean),
         safety_cases=extract_safety_cases(clause_list),
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
 
     return AnalysisResults(

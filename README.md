@@ -34,7 +34,7 @@ cd backend
 python -m venv venv
 source venv/bin/activate  # or `venv\Scripts\activate` on Windows
 pip install -r requirements.txt
-python -m uvicorn main:app --host 0.0.0.0 --port 8000
+python -m uvicorn main:app --host 0.0.0.0 --port 8001
 
 # Frontend (in another terminal)
 cd frontend
@@ -42,13 +42,18 @@ npm install
 npm run dev
 
 # Visit http://localhost:5173
+
+# Release checks
+npm run lint
+npm run build
 ```
 
 ### Backend-Only (API)
 ```bash
 pip install -r backend/requirements.txt
-python -m uvicorn backend.main:app --port 8000
+python -m uvicorn backend.main:app --port 8001
 # POST /api/analyze with CSV file
+# GET /health for service readiness
 ```
 
 ## API Quick Start
@@ -119,6 +124,34 @@ review_text,rating,date,version
 - Full: 36% (falls back to lite when models unavailable)
 - Note: Acceptable for issue *ranking* by frequency; absolute sentiment scores have low confidence
 
+## Trained Hinglish sentiment model
+
+The repository includes a reproducible CPU training pipeline for the
+official SemEval-2020 Task 9 Hinglish code-mixed sentiment data. It uses
+only the archive's 14,000-example `train` split for fitting and evaluates
+on the untouched 3,000-example `validation` and 3,000-example `test`
+splits. Labels are explicitly mapped from `positive`, `negative`, and
+`neutral` to `pos`, `neg`, and `neu`.
+
+```bash
+python scripts/train_sentiment.py \
+  --archive Semeval_2020_task9_data.zip \
+  --artifact-dir models/sentiment/hinglish_tfidf
+```
+
+The CPU artifact is written to `models/sentiment/hinglish_tfidf/` (and is
+ignored by Git because model binaries are not source-controlled). To use
+it in Full mode, set `REVORA_SENTIMENT_MODEL` to that directory. The
+classifier covers Hinglish code-mixed text only; it does not train aspect
+extraction, clustering, safety detection, sarcasm detection, or causal
+impact prediction.
+
+The supplied IndicSentiment-language JSONL files contain labels but do not
+identify an official train split in their filenames or contents, so they
+are not used for training. The SemEval archive README provides citation
+information but does not include a redistribution license; verify the
+upstream dataset terms before publishing the archive or trained artifact.
+
 **Safety Detection (46-sentence test set):**
 - Recall: 92% (catches hazards)
 - Precision: 88.5% (few false alarms)
@@ -172,7 +205,7 @@ pipeline/ (NLP)
 
 ## Limitations & Deferred Features
 
-- ❌ **Hosted persistence:** No Supabase integration yet (analysis history not saved)
+- ✅ **Local persistence:** Analysis history is stored in SQLite at `data/analysis_history.sqlite3` and survives backend restarts. Set `REVORA_HISTORY_DB` to use another database path.
 - ❌ **Full mode models:** Transformer models not downloaded; always runs Lite
 - ❌ **Frontend simulator UI:** Slider component not implemented; backend ready
 - ❌ **Language packs:** Kanglish/Tanglish/Tenglish stubs only (Hinglish complete)
@@ -187,7 +220,7 @@ These are **stretch features** from the PRD. Core pipeline (ingest → ranking �
 # Sentiment accuracy (lexicon benchmark)
 python scripts/benchmark.py
 
-# Simulator recovery (planted effects)
+# Simulator recovery (deterministic planted fixture)
 python scripts/test_simulator.py
 
 # Safety detection (recall/precision)
@@ -200,7 +233,7 @@ python tests/test_validation.py
 ## Demo Data
 
 **File:** `data/demo_hinglish.csv` (300 reviews, synthetic but realistic)
-- Planted rating rule: base 4.4, -1.2 battery, -0.8 delivery, -0.5 packaging
+- Planted rating rule: 3.2 battery, 3.6 delivery, and 3.9 packaging observations against a 4.4 baseline
 - Includes: 5 sarcasm cases, 10 mixed-opinion, 3 safety cases, 2 versions (v1/v2)
 - Pre-analyzed: `data/demo_results.pkl` (loads in <100ms)
 
